@@ -1,5 +1,3 @@
-SET(CMAKE_CXX_STANDARD 11)
-SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 file(GLOB SRCS *.cpp)
 
@@ -12,3 +10,6 @@ TARGET_LINK_LIBRARIES(testchunkrender
 
 add_test(NAME testchunkrender
          COMMAND testchunkrender)
+
+set_property(TARGET testchunkrender PROPERTY CXX_STANDARD 11)
+set_property(TARGET testchunkrender PROPERTY CXX_STANDARD_REQUIRED ON)

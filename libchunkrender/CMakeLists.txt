@@ -17,4 +17,4 @@ target_include_directories(libchunkrender PUBLIC
 )
 
 set_property(TARGET libchunkrender PROPERTY C_STANDARD 11)
-SET(CMAKE_CXX_STANDARD_REQUIRED ON)
+set_property(TARGET libchunkrender PROPERTY C_STANDARD_REQUIRED ON)
