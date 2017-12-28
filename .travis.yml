@@ -1,3 +1,9 @@
+---
+
 language: c
 script:
-- mkdir build && cd build && cmake .. && make && test/testchunkrender/testchunkrender
+  - mkdir build
+  - cd build
+  - cmake ..
+  - make
+  - test/testchunkrender/testchunkrender
