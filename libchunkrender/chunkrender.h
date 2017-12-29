@@ -31,7 +31,7 @@
 #define BLOCKS_HEADER_SIZE 6
 
 typedef struct {
-    size_t size;
+    size_t vertices;
     uint32_t *data;
 } chunk_block_model_t;
 
