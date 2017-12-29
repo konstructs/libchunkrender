@@ -1,9 +1,22 @@
 ---
 
 language: c
+
+before_install:
+  - sudo apt-get install astyle
+
 script:
-  - mkdir build
-  - cd build
+
+  # Prepare build environment
+  - mkdir build && cd build
   - cmake ..
+
+  # Run astyle syntax formatter
+  - make format
+
+  # Fail the build if the astyle formatter changed code.
+  - git diff --exit-code
+
+  # Build and run the tests
   - make
   - test/testchunkrender/testchunkrender
