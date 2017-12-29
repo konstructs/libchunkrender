@@ -4,32 +4,19 @@ extern "C" {
 #include "chunkrender.h"
 }
 
-char data[BLOCK_BUFFER_SIZE];
+uint8_t data[BLOCK_BUFFER_SIZE];
 
-void write_block_type(uint32_t i, uint32_t block_type) {
+void write_block_type(uint32_t i, uint32_t block_type, uint8_t *data) {
     data[i * BLOCK_SIZE + BLOCKS_HEADER_SIZE] = block_type & 0xFF;
     data[i * BLOCK_SIZE + 1 + BLOCKS_HEADER_SIZE] = (block_type >> 8) & 0xFF;
 }
 
-void write_health_and_orientation(uint32_t i, uint16_t health, uint8_t direction, uint8_t rotation) {
-    data[i * BLOCK_SIZE + 2 + BLOCKS_HEADER_SIZE] = (uint8_t)(health & 0xFF);
-    data[i * BLOCK_SIZE + 3 + BLOCKS_HEADER_SIZE] = ((direction << 5) & 0xE0) + ((rotation << 3) & 0x18) + (uint8_t)((health >> 8) & 0x07);
-}
-
-void write_light(uint32_t i, uint8_t ambient, uint8_t red, uint8_t green, uint8_t blue, uint8_t light) {
-    data[i * BLOCK_SIZE + 4 + BLOCKS_HEADER_SIZE] = (ambient & 0x0F) + ((red << 4) & 0xF0);
-    data[i * BLOCK_SIZE + 5 + BLOCKS_HEADER_SIZE] = (green & 0x0F) + ((blue << 4) & 0xF0);
-    data[i * BLOCK_SIZE + 6 + BLOCKS_HEADER_SIZE] = light & 0x0F;
-}
-
-void set(uint32_t x, uint32_t y, uint32_t z, uint32_t block_type, uint32_t health, uint8_t direction, uint8_t rotation, uint8_t ambient, uint8_t red, uint8_t green, uint8_t blue, uint8_t light) {
+void set(uint32_t x, uint32_t y, uint32_t z, uint32_t block_type, uint8_t *data) {
     uint32_t i = x + y * CHUNK_SIZE + z * CHUNK_SIZE * CHUNK_SIZE;
-    write_block_type(i, block_type);
-    write_health_and_orientation(i, health, direction, rotation);
-    write_light(i, ambient, red, green, blue, light);
+    write_block_type(i, block_type, data);
 }
 
-void clear() {
+void clear(uint8_t *data) {
     memset(data, 0, BLOCK_BUFFER_SIZE);
     data[0] = 3; // Set chunk format version
 }
@@ -74,7 +61,78 @@ void validate_vertices(chunk_block_model_t model, vertex_t *vertices) {
 }
 
 TEST(ChunkRenderTest, EmptyChunkHasSizeZero) {
-    clear();
-    chunk_block_model_t model = render_chunk_blocks(data, NULL, NULL, NULL);
+    clear(data);
+    // Type 0 is gas, type 1 is solid
+    uint8_t state[] = {STATE_GAS};
+    chunk_block_model_t model = render_chunk_blocks(data, NULL, state, NULL);
     EXPECT_EQ(model.vertices, 0);
+}
+
+TEST(ChunkRenderTest, OneBlockHas36Vertices) {
+    clear(data);
+
+    // Create a single block on 0,0,0 with type 1
+    set(0,0,0,1,data);
+
+    // Type 0 is transparent, type 1 is opaque
+    uint8_t is_transparent[] = {1, 0};
+
+    // Type 0 is gas, type 1 is solid
+    uint8_t state[] = {STATE_GAS, STATE_SOLID};
+
+    // Type 0 has texture 0, type 1 has texture 0
+    uint32_t texture[2][6] = {
+        {0,0,0,0,0,0},
+        {0,0,0,0,0,0}
+    };
+
+    // Create list with 36 vertices
+    vertex_t vertices[] = {
+        // norm, vertex, x, y, z, u, v
+        {0, 2, 0, 0, 0, 0, 1}, // Left side
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 1, 0, 0, 0, 1, 0},
+        {0, 5, 0, 0, 0, 1, 1},
+        {0, 2, 0, 0, 0, 0, 1},
+        {0, 1, 0, 0, 0, 1, 0},
+
+        {1, 7, 0, 0, 0, 0, 1}, // Right side
+        {1, 6, 0, 0, 0, 0, 0},
+        {1, 3, 0, 0, 0, 1, 0},
+        {1, 4, 0, 0, 0, 1, 1},
+        {1, 7, 0, 0, 0, 0, 1},
+        {1, 3, 0, 0, 0, 1, 0},
+
+        {2, 2, 0, 0, 0, 0, 1}, // Up side
+        {2, 5, 0, 0, 0, 0, 0},
+        {2, 7, 0, 0, 0, 1, 0},
+        {2, 4, 0, 0, 0, 1, 1},
+        {2, 2, 0, 0, 0, 0, 1},
+        {2, 7, 0, 0, 0, 1, 0},
+
+        {3, 1, 0, 0, 0, 0, 1}, // Down side
+        {3, 0, 0, 0, 0, 0, 0},
+        {3, 3, 0, 0, 0, 1, 0},
+        {3, 6, 0, 0, 0, 1, 1},
+        {3, 1, 0, 0, 0, 0, 1},
+        {3, 3, 0, 0, 0, 1, 0},
+
+        {4, 4, 0, 0, 0, 0, 1}, // Front side
+        {4, 3, 0, 0, 0, 0, 0},
+        {4, 0, 0, 0, 0, 1, 0},
+        {4, 2, 0, 0, 0, 1, 1},
+        {4, 4, 0, 0, 0, 0, 1},
+        {4, 0, 0, 0, 0, 1, 0},
+
+        {5, 5, 0, 0, 0, 0, 1}, // O side
+        {5, 1, 0, 0, 0, 0, 0},
+        {5, 6, 0, 0, 0, 1, 0},
+        {5, 7, 0, 0, 0, 1, 1},
+        {5, 5, 0, 0, 0, 0, 1},
+        {5, 6, 0, 0, 0, 1, 0}
+    };
+
+    chunk_block_model_t model = render_chunk_blocks(data, is_transparent, state, texture);
+    EXPECT_EQ(model.vertices, 36);
+    validate_vertices(model, vertices);
 }

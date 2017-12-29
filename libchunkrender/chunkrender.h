@@ -35,4 +35,5 @@ typedef struct {
     uint32_t *data;
 } chunk_block_model_t;
 
-chunk_block_model_t render_chunk_blocks(char *data, char *is_transparent, char *state, int *block_texture);
+chunk_block_model_t render_chunk_blocks(uint8_t *data, uint8_t *is_transparent, uint8_t *state,
+                                        uint32_t block_texture[][6]);
