@@ -4,16 +4,6 @@ extern "C" {
 #include "chunkrender.h"
 }
 
-typedef struct {
-    uint8_t normal;
-    uint8_t vertex;
-    uint8_t x;
-    uint8_t y;
-    uint8_t z;
-    uint8_t du;
-    uint8_t dv;
-} vertex_t;
-
 char data[BLOCK_BUFFER_SIZE];
 
 void write_block_type(uint32_t i, uint32_t block_type) {
@@ -43,6 +33,16 @@ void clear() {
     memset(data, 0, BLOCK_BUFFER_SIZE);
     data[0] = 3; // Set chunk format version
 }
+
+typedef struct {
+    uint8_t normal;
+    uint8_t vertex;
+    uint8_t x;
+    uint8_t y;
+    uint8_t z;
+    uint8_t du;
+    uint8_t dv;
+} vertex_t;
 
 #define OFF_NORMAL 0
 #define MASK_NORMAL 0x07
