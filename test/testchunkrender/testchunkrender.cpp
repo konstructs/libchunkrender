@@ -68,7 +68,7 @@ TEST(ChunkRenderTest, EmptyChunkHasSizeZero) {
     EXPECT_EQ(model.vertices, 0);
 }
 
-TEST(ChunkRenderTest, OneBlockHas36Vertices) {
+TEST(ChunkRenderTest, OneBlockHasValidVertices) {
     clear(data);
 
     // Create a single block on 0,0,0 with type 1
