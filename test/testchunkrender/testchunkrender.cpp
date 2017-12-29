@@ -59,8 +59,8 @@ typedef struct {
 
 void validate_vertices(chunk_block_model_t model, vertex_t *vertices) {
     for(int i = 0; i < model.vertices; i++) {
-        uint32_t d1 = model.data[i];
-        uint32_t d2 = model.data[i+1];
+        uint32_t d1 = model.data[i * 2];
+        uint32_t d2 = model.data[i * 2 + 1];
         vertex_t vertex = vertices[i];
 
         EXPECT_EQ(vertex.normal, (d1 >> OFF_NORMAL) & MASK_NORMAL);
