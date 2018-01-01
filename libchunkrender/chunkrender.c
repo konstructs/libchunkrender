@@ -7,13 +7,20 @@ typedef struct {
     uint8_t z;
 } point_t;
 
+#define LEFT 0
+#define RIGHT 1
+#define TOP 2
+#define BOTTOM 3
+#define FRONT 4
+#define BACK 5
+
 static point_t point_in_slice(uint8_t face, uint8_t slice, uint8_t a, uint8_t b) {
     point_t point;
-    if(face == 0 || face == 1) {
+    if(face == LEFT || face == RIGHT) {
         point.x = slice;
         point.y = b;
         point.z = a;
-    } else if(face == 2 || face == 3) {
+    } else if(face == TOP || face == BOTTOM) {
         point.x = a;
         point.y = slice;
         point.z = b;
@@ -23,6 +30,14 @@ static point_t point_in_slice(uint8_t face, uint8_t slice, uint8_t a, uint8_t b)
         point.z = slice;
     }
     return point;
+}
+
+static int8_t face_direction(uint8_t face) {
+    if(face == LEFT || face == BOTTOM || face == FRONT) {
+        return -1;
+    } else {
+        return 1;
+    }
 }
 
 static uint32_t chunk_index(point_t point) {
@@ -82,7 +97,7 @@ static uint8_t uv[6][2] = {
 };
 
 
-void render_face(point_t point, uint8_t face, uint32_t texture, uint32_t *data) {
+static void render_face(point_t point, uint8_t face, uint32_t texture, uint32_t *data) {
     uint8_t du = texture % 16;
     uint8_t dv = texture / 16;
     for(uint8_t vertex = 0; vertex < 6; vertex++) {
@@ -105,18 +120,35 @@ void render_face(point_t point, uint8_t face, uint32_t texture, uint32_t *data) 
     }
 }
 
+static uint8_t is_visible_through_next_slice(uint8_t face, uint8_t slice, uint8_t a, uint8_t b, int8_t direction,
+        uint8_t *data, uint8_t *is_transparent) {
+    int8_t next_slice = slice + direction;
+    if(next_slice < 0 || next_slice >= CHUNK_SIZE) {
+        // All blocks in other chunks are assumed transparent
+        return 1;
+    } else {
+        // Otherwise check if the block type of the block in the next slice is transparent
+        point_t point = point_in_slice(face, next_slice, a, b);
+        uint32_t i = chunk_index(point);
+        uint32_t block_type = data[i*BLOCK_SIZE + BLOCKS_HEADER_SIZE];
+        return is_transparent[block_type];
+    }
+}
+
 chunk_block_model_t render_chunk_blocks(uint8_t *data, uint8_t *is_transparent, uint8_t *state,
                                         uint32_t block_texture[][6]) {
     size_t vertices = 0;
     chunk_block_model_t model = allocate_chunk_block_model();
     for(uint8_t face = 0; face < 6; face++) {
         for(uint8_t slice = 0; slice < CHUNK_SIZE; slice++) {
+            int direction = face_direction(face);
             for(uint8_t a = 0; a < CHUNK_SIZE; a++) {
                 for(uint8_t b = 0; b < CHUNK_SIZE; b++) {
                     point_t point = point_in_slice(face, slice, a, b);
                     uint32_t i = chunk_index(point);
                     uint32_t block_type = data[i*BLOCK_SIZE + BLOCKS_HEADER_SIZE];
-                    if(state[block_type] != STATE_GAS) {
+                    if(state[block_type] != STATE_GAS &&
+                            is_visible_through_next_slice(face, slice, a, b, direction, data, is_transparent)) {
                         uint32_t texture = block_texture[block_type][face];
                         render_face(point, face, texture, model.data + vertices * 2);
                         vertices += 6;
