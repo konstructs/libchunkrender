@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include "chunkrender.h"
 
+#define SLICE_SIZE 32*32
+
 typedef struct {
     uint8_t x;
     uint8_t y;
@@ -97,10 +99,34 @@ static uint8_t uv[6][2] = {
 };
 
 
-static void render_face(point_t point, uint8_t face, uint32_t texture, uint32_t *data) {
+static uint16_t get_block_type(uint8_t *block_data) {
+    return block_data[0];
+}
+
+static void generate_triangles(rectangle_t rectangle, uint8_t face, uint8_t slice, uint32_t block_texture[][6],
+                               uint32_t *data) {
+    uint16_t block_type = get_block_type(rectangle.block_data);
+    uint32_t texture = block_texture[block_type][face];
     uint8_t du = texture % 16;
     uint8_t dv = texture / 16;
+
     for(uint8_t vertex = 0; vertex < 6; vertex++) {
+        uint8_t a, b;
+        if(vertex == 0 || vertex == 4) {
+            a = rectangle.a;
+            b = rectangle.b + rectangle.height;
+        } else if(vertex == 1) {
+            a = rectangle.a;
+            b = rectangle.b;
+        } else if(vertex == 2 || vertex == 5) {
+            a = rectangle.a + rectangle.width;
+            b = rectangle.b;
+        } else { // vertex == 3
+            a = rectangle.a + rectangle.width;
+            b = rectangle.b + rectangle.height;
+        }
+        point_t point = point_in_slice(face, slice, a, b);
+
         data[vertex*2] =
             (face << OFF_NORMAL) +
             (face_vertices[face][vertex] << OFF_VERTEX) +
@@ -135,27 +161,47 @@ static uint8_t is_visible_through_next_slice(uint8_t face, uint8_t slice, uint8_
     }
 }
 
+void generate_rectangles(uint8_t face,
+                         uint8_t slice,
+                         uint8_t *chunk_data,
+                         uint8_t *is_transparent,
+                         uint8_t *state,
+                         uint32_t block_texture[][6],
+                         rectangle_list_t *rectangle_list) {
+    uint32_t rectangles = 0;
+    rectangle_t *data = rectangle_list->data;
+    int direction = face_direction(face);
+    for(uint8_t a = 0; a < CHUNK_SIZE; a++) {
+        for(uint8_t b = 0; b < CHUNK_SIZE; b++) {
+            point_t point = point_in_slice(face, slice, a, b);
+            uint32_t i = chunk_index(point);
+            uint32_t block_type = chunk_data[i*BLOCK_SIZE + BLOCKS_HEADER_SIZE];
+            if(state[block_type] != STATE_GAS &&
+                    is_visible_through_next_slice(face, slice, a, b, direction, chunk_data, is_transparent)) {
+                uint8_t *block_data = &chunk_data[i*BLOCK_SIZE + BLOCKS_HEADER_SIZE];
+                rectangle_t rectangle = {a, b, 0, 0, block_data};
+                data[rectangles] = rectangle;
+                rectangles++;
+            }
+        }
+    }
+    rectangle_list->size = rectangles;
+}
+
+
 chunk_block_model_t render_chunk_blocks(uint8_t *data, uint8_t *is_transparent, uint8_t *state,
                                         uint32_t block_texture[][6]) {
     size_t vertices = 0;
+    rectangle_list_t rectangles = {0, (rectangle_t *)malloc(sizeof(rectangle_t) * SLICE_SIZE)};
     chunk_block_model_t model = allocate_chunk_block_model();
     for(uint8_t face = 0; face < 6; face++) {
         for(uint8_t slice = 0; slice < CHUNK_SIZE; slice++) {
-            int direction = face_direction(face);
-            for(uint8_t a = 0; a < CHUNK_SIZE; a++) {
-                for(uint8_t b = 0; b < CHUNK_SIZE; b++) {
-                    point_t point = point_in_slice(face, slice, a, b);
-                    uint32_t i = chunk_index(point);
-                    uint32_t block_type = data[i*BLOCK_SIZE + BLOCKS_HEADER_SIZE];
-                    if(state[block_type] != STATE_GAS &&
-                            is_visible_through_next_slice(face, slice, a, b, direction, data, is_transparent)) {
-                        uint32_t texture = block_texture[block_type][face];
-                        render_face(point, face, texture, model.data + vertices * 2);
-                        vertices += 6;
-                        if(vertices >= model.vertices) {
-                            model = reallocate_chunk_block_model(model);
-                        }
-                    }
+            generate_rectangles(face, slice, data, is_transparent, state, block_texture, &rectangles);
+            for(int i = 0; i < rectangles.size; i++) {
+                generate_triangles(rectangles.data[i], face, slice, block_texture, model.data + vertices * 2);
+                vertices += 6;
+                if(vertices >= model.vertices) {
+                    model = reallocate_chunk_block_model(model);
                 }
             }
         }
