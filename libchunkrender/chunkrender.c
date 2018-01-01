@@ -11,8 +11,8 @@ typedef struct {
 #define RIGHT 1
 #define TOP 2
 #define BOTTOM 3
-#define FRONT 4
-#define BACK 5
+#define BACK 4
+#define FRONT 5
 
 static point_t point_in_slice(uint8_t face, uint8_t slice, uint8_t a, uint8_t b) {
     point_t point;
@@ -33,7 +33,7 @@ static point_t point_in_slice(uint8_t face, uint8_t slice, uint8_t a, uint8_t b)
 }
 
 static int8_t face_direction(uint8_t face) {
-    if(face == LEFT || face == BOTTOM || face == FRONT) {
+    if(face == LEFT || face == BOTTOM || face == BACK) {
         return -1;
     } else {
         return 1;
@@ -83,8 +83,8 @@ static uint8_t face_vertices[6][6] = {
     {7, 6, 3, 4, 7, 3}, // Right side
     {2, 5, 7, 4, 2, 7}, // Top side
     {1, 0, 3, 6, 1, 3}, // Bottom side
-    {4, 3, 0, 2, 4, 0}, // Front
-    {5, 1, 6, 7, 5, 6}  // O side
+    {5, 1, 6, 7, 5, 6}, // Back side
+    {4, 3, 0, 2, 4, 0}  // Front side
 };
 
 static uint8_t uv[6][2] = {
