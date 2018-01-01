@@ -161,6 +161,11 @@ static uint8_t is_visible_through_next_slice(uint8_t face, uint8_t slice, uint8_
     }
 }
 
+#define is_masked(A, B, MASK) ((MASK[A] >> B) & 1)
+#define set_mask(A, B, MASK) (MASK[A] |= 1UL << B)
+#define clear_mask(A, B, MASK) (MASK[A] &= ~(1UL << B))
+
+
 void generate_rectangles(uint8_t face,
                          uint8_t slice,
                          uint8_t *chunk_data,
@@ -169,19 +174,78 @@ void generate_rectangles(uint8_t face,
                          uint32_t block_texture[][6],
                          rectangle_list_t *rectangle_list) {
     uint32_t rectangles = 0;
-    rectangle_t *data = rectangle_list->data;
+    uint32_t mask[CHUNK_SIZE];
+
+    for(int i=0; i < CHUNK_SIZE; i++) {
+        mask[i] = 0;
+    }
+
     int direction = face_direction(face);
-    for(uint8_t a = 0; a < CHUNK_SIZE; a++) {
-        for(uint8_t b = 0; b < CHUNK_SIZE; b++) {
+
+    for(uint8_t b = 0; b < CHUNK_SIZE; b++) {
+        for(uint8_t a = 0; a < CHUNK_SIZE; a++) {
             point_t point = point_in_slice(face, slice, a, b);
             uint32_t i = chunk_index(point);
             uint32_t block_type = chunk_data[i*BLOCK_SIZE + BLOCKS_HEADER_SIZE];
             if(state[block_type] != STATE_GAS &&
                     is_visible_through_next_slice(face, slice, a, b, direction, chunk_data, is_transparent)) {
-                uint8_t *block_data = &chunk_data[i*BLOCK_SIZE + BLOCKS_HEADER_SIZE];
-                rectangle_t rectangle = {a, b, 0, 0, block_data};
+                set_mask(a, b, mask);
+            }
+        }
+    }
+
+    rectangle_t *data = rectangle_list->data;
+
+    for(uint8_t b = 0; b < CHUNK_SIZE; b++) {
+        for(uint8_t a = 0; a < CHUNK_SIZE;) {
+            point_t point = point_in_slice(face, slice, a, b);
+            uint32_t i = chunk_index(point);
+
+            if(is_masked(a, b, mask)) {
+                uint32_t block_type = chunk_data[i*BLOCK_SIZE + BLOCKS_HEADER_SIZE];
+
+                // Calculcate the max possible width
+                uint8_t width;
+                for(width = 1; width < (CHUNK_SIZE - a); width++) {
+                    point_t point = point_in_slice(face, slice, a + width, b);
+                    uint32_t i = chunk_index(point);
+                    uint32_t width_block_type = chunk_data[i*BLOCK_SIZE + BLOCKS_HEADER_SIZE];
+                    if(!is_masked(a + width, b, mask) || block_type != width_block_type) {
+                        break;
+                    }
+                }
+
+                // Calculate the max possible height
+                uint8_t height;
+                for(height = 1; height < (CHUNK_SIZE - b); height++) {
+                    uint8_t done = 0;
+                    for(uint8_t k = 0; k < width; k++) {
+                        point_t point = point_in_slice(face, slice, a + k, b + height);
+                        uint32_t i = chunk_index(point);
+                        uint32_t height_block_type = chunk_data[i*BLOCK_SIZE + BLOCKS_HEADER_SIZE];
+                        if(!is_masked(a + k, b + height, mask) || block_type != height_block_type) {
+                            done = 1;
+                            break;
+                        }
+                    }
+                    if(done) {
+                        break;
+                    }
+                }
+
+                rectangle_t rectangle = {a, b, width - 1, height - 1, &chunk_data[i*BLOCK_SIZE + BLOCKS_HEADER_SIZE]};
                 data[rectangles] = rectangle;
                 rectangles++;
+
+                for(uint8_t da = 0; da < width; da++) {
+                    for(uint8_t db = 0; db < height; db++) {
+                        clear_mask(a + da, b + db, mask);
+                    }
+                }
+
+                a += (width + 1);
+            } else {
+                a++;
             }
         }
     }
@@ -198,6 +262,8 @@ chunk_block_model_t render_chunk_blocks(uint8_t *data, uint8_t *is_transparent, 
         for(uint8_t slice = 0; slice < CHUNK_SIZE; slice++) {
             generate_rectangles(face, slice, data, is_transparent, state, block_texture, &rectangles);
             for(int i = 0; i < rectangles.size; i++) {
+                printf("Face: %d, slice: %d, a: %d, b: %d, width: %d, height: %d\n", face, slice, rectangles.data[i].a,
+                       rectangles.data[i].b, rectangles.data[i].width, rectangles.data[i].height);
                 generate_triangles(rectangles.data[i], face, slice, block_texture, model.data + vertices * 2);
                 vertices += 6;
                 if(vertices >= model.vertices) {
