@@ -33,13 +33,13 @@ void validate_vertices(chunk_block_model_t model, vertex_t *vertices) {
         uint32_t d2 = model.data[i * 2 + 1];
         vertex_t vertex = vertices[i];
 
-        EXPECT_EQ(vertex.normal, (d1 >> OFF_NORMAL) & MASK_NORMAL);
-        EXPECT_EQ(vertex.vertex, (d1 >> OFF_VERTEX) & MASK_VERTEX);
-        EXPECT_EQ(vertex.x, (d1 >> OFF_X) & MASK_POS);
-        EXPECT_EQ(vertex.y, (d1 >> OFF_Y) & MASK_POS);
-        EXPECT_EQ(vertex.z, (d1 >> OFF_Z) & MASK_POS);
-        EXPECT_EQ(vertex.du, (d2 >> OFF_DU) & MASK_UV);
-        EXPECT_EQ(vertex.dv, (d2 >> OFF_DV) & MASK_UV);
+        EXPECT_EQ(vertex.normal, (d1 >> OFF_NORMAL) & MASK_NORMAL) << "Normal of vertex " << i << " does not match.";
+        EXPECT_EQ(vertex.vertex, (d1 >> OFF_VERTEX) & MASK_VERTEX) << "Vertex number of vertex " << i << " does not match.";
+        EXPECT_EQ(vertex.x, (d1 >> OFF_X) & MASK_POS) << "X coordinate of vertex " << i << " does not match.";
+        EXPECT_EQ(vertex.y, (d1 >> OFF_Y) & MASK_POS) << "Y coordinate of vertex " << i << " does not match.";
+        EXPECT_EQ(vertex.z, (d1 >> OFF_Z) & MASK_POS) << "Z coordinate of vertex " << i << " does not match.";
+        EXPECT_EQ(vertex.du, (d2 >> OFF_DU) & MASK_UV) << "U texture coordinate of vertex " << i << " does not match.";
+        EXPECT_EQ(vertex.dv, (d2 >> OFF_DV) & MASK_UV) << "V texture coordinate of vertex " << i << " does not match.";
     }
 }
 
@@ -134,7 +134,7 @@ TEST(ChunkRenderTest, OneBlockHasValidVertices) {
     };
 
     chunk_block_model_t model = render_chunk_blocks(data, is_transparent, state, texture);
-    EXPECT_EQ(model.vertices, 36);
+    EXPECT_EQ(model.vertices, 36)  << "The number of vertices does not match";
     validate_vertices(model, vertices);
 }
 
