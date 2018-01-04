@@ -85,8 +85,8 @@ static uint8_t face_vertices[6][6] = {
     {7, 6, 3, 4, 7, 3}, // Right side
     {2, 5, 7, 4, 2, 7}, // Top side
     {1, 0, 3, 6, 1, 3}, // Bottom side
-    {5, 1, 6, 7, 5, 6}, // Back side
-    {4, 3, 0, 2, 4, 0}  // Front side
+    {4, 3, 0, 2, 4, 0}, // Back side
+    {5, 1, 6, 7, 5, 6}  // Front side
 };
 
 static uint8_t uv[6][2] = {
