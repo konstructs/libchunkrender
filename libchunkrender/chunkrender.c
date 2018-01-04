@@ -83,7 +83,7 @@ static void free_chunk_block_model(chunk_block_model_t model) {
 static uint8_t face_vertices[6][6] = {
     {2, 0, 1, 5, 2, 1}, // Left side
     {7, 6, 3, 4, 7, 3}, // Right side
-    {2, 5, 7, 4, 2, 7}, // Top side
+    {7, 4, 2, 5, 7, 2}, // Top side
     {1, 0, 3, 6, 1, 3}, // Bottom side
     {4, 3, 0, 2, 4, 0}, // Back side
     {5, 1, 6, 7, 5, 6}  // Front side
@@ -112,18 +112,34 @@ static void generate_triangles(rectangle_t rectangle, uint8_t face, uint8_t slic
 
     for(uint8_t vertex = 0; vertex < 6; vertex++) {
         uint8_t a, b;
-        if(vertex == 0 || vertex == 4) {
-            a = rectangle.a;
-            b = rectangle.b + rectangle.height;
-        } else if(vertex == 1) {
-            a = rectangle.a;
-            b = rectangle.b;
-        } else if(vertex == 2 || vertex == 5) {
-            a = rectangle.a + rectangle.width;
-            b = rectangle.b;
-        } else { // vertex == 3
-            a = rectangle.a + rectangle.width;
-            b = rectangle.b + rectangle.height;
+        if(face == RIGHT || face == BACK || face == TOP) {
+            if(vertex == 0 || vertex == 4) {
+                a = rectangle.a + rectangle.width;
+                b = rectangle.b + rectangle.height;
+            } else if(vertex == 1) {
+                a = rectangle.a + rectangle.width;
+                b = rectangle.b;
+            } else if(vertex == 2 || vertex == 5) {
+                a = rectangle.a;
+                b = rectangle.b;
+            } else { // vertex == 3
+                a = rectangle.a;
+                b = rectangle.b + rectangle.height;
+            }
+        } else {
+            if(vertex == 0 || vertex == 4) {
+                a = rectangle.a;
+                b = rectangle.b + rectangle.height;
+            } else if(vertex == 1) {
+                a = rectangle.a;
+                b = rectangle.b;
+            } else if(vertex == 2 || vertex == 5) {
+                a = rectangle.a + rectangle.width;
+                b = rectangle.b;
+            } else { // vertex == 3
+                a = rectangle.a + rectangle.width;
+                b = rectangle.b + rectangle.height;
+            }
         }
         point_t point = point_in_slice(face, slice, a, b);
 
