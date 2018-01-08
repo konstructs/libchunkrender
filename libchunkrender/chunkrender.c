@@ -259,7 +259,7 @@ void generate_rectangles(uint8_t face,
                     }
                 }
 
-                a += (width + 1);
+                a += width;
             } else {
                 a++;
             }
