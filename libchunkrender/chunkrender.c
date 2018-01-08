@@ -177,9 +177,9 @@ static uint8_t is_visible_through_next_slice(uint8_t face, uint8_t slice, uint8_
     }
 }
 
-#define is_masked(A, B, MASK) ((MASK[A] >> B) & 1)
-#define set_mask(A, B, MASK) (MASK[A] |= 1UL << B)
-#define clear_mask(A, B, MASK) (MASK[A] &= ~(1UL << B))
+#define is_masked(A, B, MASK) ((MASK[A] >> (B)) & 1U)
+#define set_mask(A, B, MASK) (MASK[A] |= 1U << (B))
+#define clear_mask(A, B, MASK) (MASK[A] &= ~(1U << (B)))
 
 
 void generate_rectangles(uint8_t face,
